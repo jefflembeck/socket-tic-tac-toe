@@ -1,0 +1,101 @@
+<!doctype html>
+<html>
+  <head>
+    <style>
+      button {
+        width: 30%;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Tic-Tac-Toe</h1>
+    <p id="winner"></p>
+    <section class="board">
+      <button id="1"></button>
+      <button id="2"></button>
+      <button id="3"></button>
+      <button id="4"></button>
+      <button id="5"></button>
+      <button id="6"></button>
+      <button id="7"></button>
+      <button id="8"></button>
+      <button id="9"></button>
+    </section>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      jQuery(function($){
+        var socket = io.connect('http://localhost'),
+            $board = $(".board"),
+            ticTacToe = {
+              whoseTurn: "X",
+              changeWhoseTurn: function(){
+                if (this.whoseTurn === "X") {
+                  this.whoseTurn = "O";
+                } else {
+                  this.whoseTurn = "X";
+                }
+              },
+              findWinner: function(mark){
+                var buttons = $board.children( "button" )
+                    winner  = false;
+                if (buttons[0].innerHTML === mark && buttons[1].innerHTML === mark && buttons[2].innerHTML === mark) {
+                  winner = true;
+                } else if (buttons[3].innerHTML === mark && buttons[4].innerHTML === mark && buttons[5].innerHTML === mark) {
+                  winner = true;
+                } else if (buttons[6].innerHTML === mark && buttons[7].innerHTML === mark && buttons[8].innerHTML === mark) {
+                  winner = true;
+                } else if (buttons[0].innerHTML === mark && buttons[3].innerHTML === mark && buttons[6].innerHTML === mark) {
+                  winner = true;
+                } else if (buttons[1].innerHTML === mark && buttons[4].innerHTML === mark && buttons[7].innerHTML === mark) {
+                  winner = true;
+                } else if (buttons[2].innerHTML === mark && buttons[5].innerHTML === mark && buttons[8].innerHTML === mark) {
+                  winner = true;
+                } else if (buttons[0].innerHTML === mark && buttons[4].innerHTML === mark && buttons[8].innerHTML === mark) {
+                  winner = true;
+                } else if (buttons[2].innerHTML === mark && buttons[4].innerHTML === mark && buttons[6].innerHTML === mark) {
+                  winner = true;
+                }
+                return winner;
+              }
+            },
+            channel = "heyo";
+
+        socket.on("connect", function() {
+          socket.emit("joinChannel", {
+              channel: channel
+          });
+        });
+
+        socket.on("game over", function(data) {
+          console.log("game over");
+          var winner = data.winner;
+          $("#winner").html(winner + " WINS!");
+        });
+
+        socket.on("turn played", function(data){
+          var spotPlayed = data.spotPlayed,
+              whoPlayed  = data.whoPlayed;
+          $("#" + spotPlayed).html(whoPlayed);
+          if (ticTacToe.findWinner("X") || ticTacToe.findWinner("O")) {
+            socket.emit("winner", whoPlayed);
+          } else {
+            ticTacToe.changeWhoseTurn();
+          }
+        });
+
+        $board.on( "click", "button", function(){
+          $(this).html(ticTacToe.whoseTurn);
+          socket.emit("turn played", { "whoPlayed": ticTacToe.whoseTurn, "spotPlayed": $(this).attr("id") });
+          if (ticTacToe.findWinner("X") || ticTacToe.findWinner("O")) {
+            socket.emit("winner", ticTacToe.whoseTurn);
+          } else {
+            ticTacToe.changeWhoseTurn();
+          }
+        });
+
+      });
+    </script>
+  </body>
+</html>
+
